@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simulador Sistema de Impresión</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="container">
+    <header class="hero">
+      <h1>Simulador de Sistema de Impresión</h1>
+      <p>Autómatas y redes de Petri — estados, pausas y errores</p>
+    </header>
+
+    <div class="layout">
+      <div class="card">
+        <h2>Controles</h2>
+        <div class="grid-3">
+          <div class="field"><label for="docName">Documento</label><input id="docName" type="text"
+              placeholder="Ej: Informe" maxlength="40" /></div>
+          <div class="field"><label for="docPages">Páginas</label><input id="docPages" type="number" min="1" max="25"
+              value="5" /></div>
+          <div class="field"><label for="printerSpeed">Vel: <span id="speedValue">1</span> p/s</label><input
+              id="printerSpeed" type="range" min="1" max="3" value="1" /></div>
+        </div>
+        <div class="actions">
+          <button class="btn-primary" id="addJobBtn">+ Trabajo</button>
+          <button class="btn-blue" id="randomJobBtn">Aleatorio</button>
+          <button class="btn-warning" id="pauseBtn">Pausar / Reanudar</button>
+          <button class="btn-danger" id="errorBtn">Simular error</button>
+          <button class="btn-dark" id="clearErrorBtn">Limpiar error</button>
+          <button class="btn-dark" id="resetBtn">Reiniciar</button>
+        </div>
+        <div class="stats">
+          <div class="stat"><small>Estado</small><strong id="stateText">INACTIVA</strong></div>
+          <div class="stat"><small>En cola</small><strong id="queueCount">0</strong></div>
+          <div class="stat"><small>Completados</small><strong id="doneCount">0</strong></div>
+          <div class="stat"><small>Espera prom.</small><strong id="avgWait">0 s</strong></div>
+        </div>
+        <div class="status-bar">
+          <div class="printer-box">
+            <div id="stateBadge" class="badge idle">Inactiva</div>
+            <div class="muted" id="printerDescription" style="font-size:.7rem">Sin trabajo.</div>
+            <div class="progress"><span id="jobProgress"></span></div>
+            <div class="muted" id="progressText" style="font-size:.68rem">0%</div>
+            <div class="footer-note" id="systemClock">t = 0 s</div>
+          </div>
+          <div class="job-box">
+            <h3>Trabajo activo</h3>
+            <div id="activeJobContent" class="muted" style="font-size:.72rem">Sin trabajo activo.</div>
+          </div>
+        </div>
+        <div class="tables">
+          <div>
+            <h3>Cola</h3>
+            <div id="queueList" class="list"></div>
+          </div>
+          <div>
+            <h3>Completados</h3>
+            <div id="doneList" class="list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="graphs">
+        <div class="card">
+          <h2>Grafo del autómata</h2>
+          <div class="legend">
+            <span><i class="dot" style="background:#4ade80"></i>Activo</span>
+            <span><i class="dot" style="background:#38bdf8"></i>Origen</span>
+            <span><i class="dot" style="background:#ef4444"></i>Error</span>
+            <span><i class="dot" style="background:#64748b"></i>Inactivo</span>
+          </div>
+          <div class="svg-wrap">
+            <svg viewBox="0 0 1100 360" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                  <path d="M0,0 L10,5 L0,10 z" fill="#64748b" />
+                </marker>
+              </defs>
+              <path id="edge-add" class="transition-line" d="M 158 180 L 285 180" />
+              <path id="edge-start" class="transition-line" d="M 410 180 L 558 180" />
+              <path id="edge-finish-ready" class="transition-line" d="M 600 140 C 568 88, 464 82, 392 138" />
+              <path id="edge-finish-idle" class="transition-line" d="M 586 130 C 520 36, 290 28, 118 132" />
+              <path id="edge-pause" class="transition-line" d="M 668 211 C 726 262, 820 278, 872 266" />
+              <path id="edge-resume" class="transition-line" d="M 882 249 C 794 212, 694 196, 680 196" />
+              <path id="edge-error" class="transition-line" d="M 648 140 C 726 90, 820 74, 862 86" />
+              <path id="edge-error-return" class="transition-line" d="M 858 110 C 776 148, 800 162, 680 160" />
+
+              <rect class="edge-bg" x="160" y="158" width="116" height="22" />
+              <text id="label-add" class="edge-label" x="220" y="173" text-anchor="middle">Agregar trabajo</text>
+              <rect class="edge-bg" x="412" y="158" width="120" height="22" />
+              <text id="label-start" class="edge-label" x="472" y="173" text-anchor="middle">Iniciar impresión</text>
+              <rect class="edge-bg" x="452" y="66" width="130" height="22" />
+              <text id="label-finish-ready" class="edge-label" x="517" y="81" text-anchor="middle">Finalizar y
+                seguir</text>
+              <rect class="edge-bg" x="282" y="22" width="140" height="22" />
+              <text id="label-finish-idle" class="edge-label" x="352" y="37" text-anchor="middle">Finalizar sin
+                cola</text>
+              <rect class="edge-bg" x="750" y="268" width="66" height="22" />
+              <text id="label-pause" class="edge-label" x="783" y="283" text-anchor="middle">Pausar</text>
+              <rect class="edge-bg" x="736" y="204" width="88" height="22" />
+              <text id="label-resume" class="edge-label" x="780" y="219" text-anchor="middle">Reanudar</text>
+              <rect class="edge-bg" x="754" y="70" width="56" height="22" />
+              <text id="label-error" class="edge-label" x="782" y="85" text-anchor="middle">Error</text>
+              <rect class="edge-bg" x="722" y="136" width="110" height="22" />
+              <text id="label-clear-error" class="edge-label" x="777" y="151" text-anchor="middle">Resolver error</text>
+
+              <circle id="state-IDLE" class="state-node inactive" cx="98" cy="180" r="60" />
+              <circle id="state-READY" class="state-node inactive" cx="348" cy="180" r="60" />
+              <circle id="state-PRINTING" class="state-node inactive" cx="620" cy="180" r="60" />
+              <circle id="state-ERROR" class="state-node inactive" cx="912" cy="98" r="54" />
+              <circle id="state-PAUSED" class="state-node inactive" cx="930" cy="282" r="54" />
+
+              <text class="node-label" x="98" y="186" text-anchor="middle">INACTIVA</text>
+              <text class="node-label" x="348" y="186" text-anchor="middle">LISTA</text>
+              <text class="node-label" x="620" y="186" text-anchor="middle">IMPRIMIENDO</text>
+              <text class="node-label" x="912" y="104" text-anchor="middle">ERROR</text>
+              <text class="node-label" x="930" y="288" text-anchor="middle">PAUSADA</text>
+            </svg>
+          </div>
+          <p class="explain"><strong>INACTIVA</strong> sin trabajo · <strong>LISTA</strong> cola pendiente ·
+            <strong>IMPRIMIENDO</strong> ocupada · <strong>PAUSADA</strong> detenida · <strong>ERROR</strong> falla.
+          </p>
+        </div>
+
+        <div class="card">
+          <h2>Red de Petri</h2>
+          <div class="legend">
+            <span><i class="dot" style="background:#fbbf24"></i>Tokens</span>
+            <span><i class="dot" style="background:#a78bfa"></i>Transiciones</span>
+            <span><i class="dot" style="background:#60a5fa"></i>Lugares</span>
+            <span><i class="dot" style="background:#ef4444"></i>P5 Error</span>
+            <span><i class="dot" style="background:#f59e0b"></i>P6 Pausado</span>
+          </div>
+
+          <div class="svg-wrap">
+            <svg viewBox="0 0 1400 420" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <marker id="arrow2" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                  <path d="M0,0 L10,5 L0,10 z" fill="#64748b" />
+                </marker>
+                <marker id="arrowErr" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                  <path d="M0,0 L10,5 L0,10 z" fill="#ef4444" />
+                </marker>
+                <marker id="arrowPause" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                  <path d="M0,0 L10,5 L0,10 z" fill="#f59e0b" />
+                </marker>
+              </defs>
+
+              <path id="petri-enqueue-in" class="petri-line" d="M 120 160 L 220 160" />
+              <path id="petri-enqueue-out" class="petri-line" d="M 280 160 L 380 160" />
+              <path id="petri-start-in" class="petri-line" d="M 480 160 L 580 160" />
+              <path id="petri-start-out" class="petri-line" d="M 640 160 L 740 160" />
+              <path id="petri-finish-in" class="petri-line" d="M 840 160 L 940 160" />
+              <path id="petri-finish-out" class="petri-line" d="M 1000 160 L 1100 160" />
+              <path id="petri-return-in" class="petri-line" d="M 1140 190 C 1140 280, 900 300, 760 240" />
+              <path id="petri-return-out" class="petri-line" d="M 700 240 C 620 210, 560 190, 420 190" />
+
+              <path id="petri-error-in-1" class="petri-line error-line" d="M 760 200 L 610 260"
+                style="marker-end:url(#arrowErr)" />
+              <path id="petri-error-in-2" class="petri-line error-line" d="M 585 310 L 500 340"
+                style="marker-end:url(#arrowErr)" />
+              <path id="petri-error-out-1" class="petri-line error-line" d="M 500 340 L 560 375"
+                style="marker-end:url(#arrowErr)" />
+              <path id="petri-error-out-2" class="petri-line error-line" d="M 610 350 L 760 210"
+                style="marker-end:url(#arrowErr)" />
+
+              <path id="petri-pause-in-1" class="petri-line pause-line" d="M 820 200 L 1030 260"
+                style="marker-end:url(#arrowPause)" />
+              <path id="petri-pause-in-2" class="petri-line pause-line" d="M 1055 310 L 1140 340"
+                style="marker-end:url(#arrowPause)" />
+              <path id="petri-pause-out-1" class="petri-line pause-line" d="M 1140 340 L 1030 375"
+                style="marker-end:url(#arrowPause)" />
+              <path id="petri-pause-out-2" class="petri-line pause-line" d="M 1030 350 L 840 210"
+                style="marker-end:url(#arrowPause)" />
+
+              <circle id="place-queue" class="petri-place" cx="80" cy="160" r="42" />
+              <circle id="place-free" class="petri-place" cx="430" cy="160" r="46" />
+              <circle id="place-printing" class="petri-place" cx="790" cy="160" r="46" />
+              <circle id="place-done" class="petri-place" cx="1140" cy="160" r="42" />
+              <circle id="place-error" class="petri-place" cx="460" cy="340" r="42" />
+              <circle id="place-paused" class="petri-place" cx="1160" cy="340" r="42" />
+
+              <rect id="tEnqueue" class="petri-transition" x="220" y="125" width="60" height="70" />
+              <rect id="tStart" class="petri-transition" x="580" y="125" width="60" height="70" />
+              <rect id="tFinish" class="petri-transition" x="940" y="125" width="60" height="70" />
+              <rect id="tReturn" class="petri-transition" x="700" y="220" width="60" height="50" />
+              <rect id="tErrorIn" class="petri-transition t-error" x="560" y="260" width="50" height="50" />
+              <rect id="tErrorOut" class="petri-transition t-error" x="560" y="350" width="50" height="50" />
+              <rect id="tPauseIn" class="petri-transition t-pause" x="1030" y="260" width="50" height="50" />
+              <rect id="tPauseOut" class="petri-transition t-pause" x="1030" y="350" width="50" height="50" />
+
+              <text class="node-label" x="80" y="225" text-anchor="middle" style="font-size:14px">P1 Cola</text>
+              <text class="node-label" x="430" y="230" text-anchor="middle" style="font-size:14px">P2 Libre</text>
+              <text class="node-label" x="790" y="230" text-anchor="middle" style="font-size:14px">P3 Imprimiendo</text>
+              <text class="node-label" x="1140" y="225" text-anchor="middle" style="font-size:14px">P4 Listo</text>
+              <text class="node-label" x="480" y="380" text-anchor="middle" style="font-size:14px;fill:#fca5a5">P5
+                Error</text>
+              <text class="node-label" x="1180" y="380" text-anchor="middle" style="font-size:14px;fill:#fcd34d">P6
+                Pausado</text>
+
+              <text class="node-label" x="250" y="170" text-anchor="middle" style="font-size:11px">T1</text>
+              <text class="node-label" x="610" y="170" text-anchor="middle" style="font-size:11px">T2</text>
+              <text class="node-label" x="970" y="170" text-anchor="middle" style="font-size:11px">T3</text>
+              <text class="node-label" x="730" y="215" text-anchor="middle" style="font-size:11px">T4</text>
+              <text class="node-label" x="585" y="255" text-anchor="middle"
+                style="font-size:11px;fill:#fca5a5">T5</text>
+              <text class="node-label" x="585" y="415" text-anchor="middle"
+                style="font-size:11px;fill:#fca5a5">T6</text>
+              <text class="node-label" x="1055" y="255" text-anchor="middle"
+                style="font-size:11px;fill:#fcd34d">T7</text>
+              <text class="node-label" x="1055" y="415" text-anchor="middle"
+                style="font-size:11px;fill:#fcd34d">T8</text>
+
+              <text id="tokenQueue" class="token-label" x="80" y="170" text-anchor="middle">0</text>
+              <text id="tokenFree" class="token-label" x="430" y="170" text-anchor="middle">1</text>
+              <text id="tokenPrinting" class="token-label" x="790" y="170" text-anchor="middle">0</text>
+              <text id="tokenDone" class="token-label" x="1140" y="170" text-anchor="middle">0</text>
+              <text id="tokenError" class="token-label token-error" x="480" y="330" text-anchor="middle">0</text>
+              <text id="tokenPaused" class="token-label token-paused" x="1180" y="330" text-anchor="middle">0</text>
+            </svg>
+          </div>
+        </div>
+
+        <div class="marking-bar">
+          <strong>Marcado M =</strong>
+          <span id="chip-p1" class="mark-chip idle-place">P1 Cola: 0</span>
+          <span id="chip-p2" class="mark-chip active-place">P2 Libre: 1</span>
+          <span id="chip-p3" class="mark-chip idle-place">P3 Impr: 0</span>
+          <span id="chip-p4" class="mark-chip idle-place">P4 Listo: 0</span>
+          <span id="chip-p5" class="mark-chip idle-place">P5 Error: 0</span>
+          <span id="chip-p6" class="mark-chip idle-place">P6 Pausado: 0</span>
+        </div>
+        <p class="explain">
+          Flujo principal: P1→T1→P2→T2→P3→T3→P4→T4→P2.
+          T5 (rojo) gestiona P3↔P5 al activar/limpiar error.
+          T6 (naranja) gestiona P3↔P6 al pausar/reanudar.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
